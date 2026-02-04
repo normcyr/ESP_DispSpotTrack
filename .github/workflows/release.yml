@@ -19,6 +19,9 @@ jobs:
             - name: Install PlatformIO
               run: pip install platformio
 
+            - name: Install esptool
+              run: pip install esptool
+
             - name: Build firmware
               run: ./build-release.sh
 
