@@ -6,6 +6,7 @@
 .pio/
 .vscode/
 build/
+releases/
 .clang_complete
 .gcc-flags.json
 

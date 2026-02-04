@@ -334,7 +334,82 @@ Arduino C++ version has:
 
 Configuration process remains identical for users.
 
-## 📚 References
+## � Building & Releasing
+
+### Build a Release Binary
+
+```bash
+./build-release.sh
+```
+
+This will:
+
+1. Read version from `version.txt`
+2. Auto-update `FIRMWARE_VERSION` constant in main.cpp
+3. Compile the firmware
+4. Extract binary to `releases/esp8266-spotify-vX.X.X-YYYYMMDD.bin`
+5. Display file size and SHA256 checksum
+
+### Flash via esptool.py
+
+**Install esptool:**
+
+```bash
+pip install esptool
+```
+
+**Identify USB port:**
+
+```bash
+# macOS/Linux
+ls /dev/cu.usbserial-*
+ls /dev/ttyUSB*
+
+# Windows
+mode COM*
+```
+
+**Flash the firmware:**
+
+```bash
+esptool.py -p /dev/cu.usbserial-1130 write_flash 0x0 releases/esp8266-spotify-v0.1.0-20260204.bin
+```
+
+**Optional: Erase flash first (if having issues)**
+
+```bash
+esptool.py -p /dev/cu.usbserial-1130 erase_flash
+esptool.py -p /dev/cu.usbserial-1130 write_flash 0x0 releases/esp8266-spotify-v0.1.0-20260204.bin
+```
+
+**Troubleshooting:**
+
+- Permission denied: Use `sudo` or add user to `dialout` group
+- Port busy: Close serial monitor in Arduino IDE first
+- Flashing fails: Try lower baud rate: `esptool.py -b 115200 -p /dev/cu.usbserial-1130 write_flash 0x0 ...`
+
+### Flash via PlatformIO
+
+```bash
+# Auto-compile and upload
+pio run -e esp8266 -t upload
+
+# Monitor serial output
+pio device monitor
+```
+
+### Update Version
+
+Edit `version.txt` (single source of truth):
+
+```bash
+echo "0.1.1" > version.txt
+./build-release.sh
+```
+
+The script automatically updates the firmware version constant and rebuilds.
+
+## �📚 References
 
 - [Arduino IDE Documentation](https://docs.arduino.cc/)
 - [ESP8266 Arduino Core](https://github.com/esp8266/Arduino)

@@ -24,6 +24,9 @@
 #include <MD_Parola.h>
 #include <PubSubClient.h>
 
+// ============ Version ============
+#define FIRMWARE_VERSION "0.1.0"
+
 // ============ Configuration ============
 #define EEPROM_SIZE 512
 #define CONFIG_START 0
@@ -114,7 +117,7 @@ void setup()
   Serial.begin(115200);
   delay(100);
 
-  Serial.println("\n\n[*] ESP_DispSpotTrack - Arduino Edition");
+  Serial.printf("\n\n[*] ESP_DispSpotTrack v%s - Arduino Edition\n", FIRMWARE_VERSION);
   Serial.println("[*] Initializing...");
 
   // Initialize EEPROM
