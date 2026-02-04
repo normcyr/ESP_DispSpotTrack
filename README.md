@@ -189,7 +189,7 @@ At 115200 baud, you should see:
 [→] Connecting to MQTT: 192.168.0.204
 [✓] MQTT connected
 [✓] Subscribed to: home_assistant/spotify/current
-[MQTT] home_assistant/spotify/current: Taylor Swift - Blank Space
+[MQTT] home_assistant/spotify/current: Les Cowboys Fringants - En Berne
 ```
 
 ## 🐛 Troubleshooting
@@ -306,34 +306,6 @@ Settings are automatically persisted to EEPROM and restored on boot:
 | Memory usage | ~65KB / 80KB |
 | Compile time | <30 seconds |
 
-## 📈 Platform Comparison
-
-| Feature | MicroPython | Arduino C++ |
-|---|---|---|
-| MAX7219 support | ❌ Broken custom SPI | ✅ MD_MAX72XX library |
-| Development speed | ✅ Fast iteration | ⚠️ Compile required |
-| Library ecosystem | ⚠️ Limited | ✅ Extensive |
-| Debugging | ⚠️ Difficult | ✅ Serial output clear |
-| Performance | ⚠️ Slower | ✅ Faster |
-
-**This project switched to Arduino C++** to get working MAX7219 support.
-
-## 🔄 Migration from MicroPython
-
-Previous MicroPython version had:
-
-- ✅ Working WiFi/MQTT
-- ✅ Working captive portal
-- ❌ Broken MAX7219 display (all pixels on, no rendering)
-
-Arduino C++ version has:
-
-- ✅ Working WiFi/MQTT
-- ✅ Working captive portal
-- ✅ **Working MAX7219 display** (proven library)
-
-Configuration process remains identical for users.
-
 ## � Building & Releasing
 
 ### Build a Release Binary
@@ -430,10 +402,12 @@ The GitHub Actions workflow will:
 3. Create a GitHub Release with the binary attached
 4. The binary is ready to download and flash
 
-**Download from Releases page:** <https://github.com/YOUR_USERNAME/ESP_DispSpotTrack/releases>
+**Download from Releases page:** <https://github.com/normcyr/ESP_DispSpotTrack/releases>
+
 ## 🌟 Inspiration
 
 This project is loosely inspired by [ESPTimeCast](https://github.com/mfactory-osaka/ESPTimeCast), which demonstrates excellent patterns for ESP8266 display rendering and WiFi management. Special thanks to that project for the MD_Parola usage patterns.
+
 ## �📚 References
 
 - [Arduino IDE Documentation](https://docs.arduino.cc/)
