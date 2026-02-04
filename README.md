@@ -385,23 +385,6 @@ The script automatically updates the firmware version constant and rebuilds.
 
 This project uses GitHub Actions to automatically build and release firmware:
 
-**Create a release:**
-
-```bash
-echo "0.1.1" > version.txt
-git add version.txt
-git commit -m "bump: version 0.1.1"
-git tag v0.1.1
-git push origin v0.1.1
-```
-
-The GitHub Actions workflow will:
-
-1. Build the firmware with PlatformIO
-2. Extract the `.bin` file
-3. Create a GitHub Release with the binary attached
-4. The binary is ready to download and flash
-
 **Download from Releases page:** <https://github.com/normcyr/ESP_DispSpotTrack/releases>
 
 ## 🌟 Inspiration
