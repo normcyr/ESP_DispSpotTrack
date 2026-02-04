@@ -1,0 +1,52 @@
+name: Build & Release Firmware
+
+on:
+    push:
+        tags:
+            - "v*" # Trigger on git tag like v0.1.0
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.10"
+
+            - name: Install PlatformIO
+              run: pip install platformio
+
+            - name: Build firmware
+              run: ./build-release.sh
+
+            - name: Get version
+              id: version
+              run: echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
+
+            - name: Create Release
+              uses: actions/create-release@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tag_name: ${{ github.ref }}
+                  release_name: Release ${{ steps.version.outputs.VERSION }}
+                  body: |
+                      ## Firmware Version ${{ steps.version.outputs.VERSION }}
+
+                      ### Flash Instructions
+                      ```bash
+                      esptool.py -p /dev/cu.usbserial-XXXX write_flash 0x0 esp8266-spotify-v${{ steps.version.outputs.VERSION }}-*.bin
+                      ```
+
+            - name: Upload Asset
+              uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ steps.create_release.outputs.upload_url }}
+                  asset_path: ./releases/esp8266-spotify-v${{ steps.version.outputs.VERSION }}-*.bin
+                  asset_name: esp8266-spotify-v${{ steps.version.outputs.VERSION }}.bin
+                  asset_content_type: application/octet-stream
