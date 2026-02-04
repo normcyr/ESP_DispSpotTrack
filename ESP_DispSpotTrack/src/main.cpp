@@ -1,14 +1,14 @@
 /**
  * ESP_DispSpotTrack.ino - Main Arduino sketch
- * 
+ *
  * ESP8266 Spotify Display with MAX7219 LED matrix
  * Fetches current track from Home Assistant via MQTT and displays on LED matrix
- * 
+ *
  * Hardware:
  *   - ESP8266 (D1 Mini)
  *   - MAX7219 8×32 LED matrix
  *   - MQTT Broker (Home Assistant)
- * 
+ *
  * Pins:
  *   - GPIO14 (D5) = CLK
  *   - GPIO13 (D7) = CS
@@ -16,13 +16,13 @@
  */
 
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
 #include <EEPROM.h>
-#include <PubSubClient.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
 #include <MD_MAX72xx.h>
 #include <MD_Parola.h>
+#include <PubSubClient.h>
 
 // ============ Configuration ============
 #define EEPROM_SIZE 512
@@ -34,17 +34,18 @@
 #define MQTT_TOPIC "home_assistant/spotify/current"
 
 // Hardware Pins
-#define CLK_PIN D5   // GPIO14
-#define CS_PIN D7    // GPIO13
-#define DIN_PIN D8   // GPIO15
+#define CLK_PIN D5 // GPIO14
+#define CS_PIN D7  // GPIO13
+#define DIN_PIN D8 // GPIO15
 
 // MAX7219
-#define MAX_DEVICES 4  // 4 x 8×8 = 8×32 matrix
+#define MAX_DEVICES 4 // 4 x 8×8 = 8×32 matrix
 #define HARDWARE_TYPE MD_MAX72XX::FC16_HW
 #define MAX_INTENSITY 3
 
 // ============ Configuration Structure ============
-struct Config {
+struct Config
+{
   char ssid[32];
   char password[64];
   char mqtt_host[32];
@@ -66,26 +67,26 @@ MD_Parola display(MD_MAX72XX::FC16_HW, DIN_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 
 // ============ Global Variables ============
 String current_message = "";
-String scroll_text = "";  // Store the scrolling text
+String scroll_text = ""; // Store the scrolling text
 unsigned long last_mqtt_attempt = 0;
-const unsigned long MQTT_RECONNECT_INTERVAL = 5000;  // 5 seconds
+const unsigned long MQTT_RECONNECT_INTERVAL = 5000; // 5 seconds
 bool display_enabled = true;
-unsigned long wifi_connected_time = 0;  // Track when WiFi connects
-bool ready_shown = false;  // Track if READY was shown
-bool message_looping = false;  // Track if we're looping a message
-int brightness = MAX_INTENSITY;  // Current brightness (0-15)
-int scroll_speed = 100;  // Scroll speed in ms per step
-const int EEPROM_MESSAGE_START = 256;  // Where to store last message
-const int EEPROM_MESSAGE_SIZE = 128;  // Max size of message
-const int EEPROM_BRIGHTNESS_ADDR = 384;  // Brightness setting
-const int EEPROM_SCROLL_SPEED_ADDR = 385;  // Scroll speed (2 bytes: high, low)
+unsigned long wifi_connected_time = 0;    // Track when WiFi connects
+bool ready_shown = false;                 // Track if READY was shown
+bool message_looping = false;             // Track if we're looping a message
+int brightness = MAX_INTENSITY;           // Current brightness (0-15)
+int scroll_speed = 100;                   // Scroll speed in ms per step
+const int EEPROM_MESSAGE_START = 256;     // Where to store last message
+const int EEPROM_MESSAGE_SIZE = 128;      // Max size of message
+const int EEPROM_BRIGHTNESS_ADDR = 384;   // Brightness setting
+const int EEPROM_SCROLL_SPEED_ADDR = 385; // Scroll speed (2 bytes: high, low)
 
 // ============ Function Declarations ============
 void loadConfig();
 void saveConfig();
 void resetConfig();
 void loadLastMessage();
-void saveLastMessage(const String& message);
+void saveLastMessage(const String &message);
 void loadBrightness();
 void saveBrightness();
 void loadScrollSpeed();
@@ -102,127 +103,148 @@ void handleBrightnessAPI();
 void handleScrollSpeedAPI();
 void handleTestMessageAPI();
 void handleNotFound();
-void mqttCallback(char* topic, byte* payload, unsigned int length);
-void updateDisplay(const String& message);
+void mqttCallback(char *topic, byte *payload, unsigned int length);
+void updateDisplay(const String &message);
 void loopMessage();
-void scrollText(const String& text);
+void scrollText(const String &text);
 
 // ============ Setup ============
-void setup() {
+void setup()
+{
   Serial.begin(115200);
   delay(100);
-  
+
   Serial.println("\n\n[*] ESP_DispSpotTrack - Arduino Edition");
   Serial.println("[*] Initializing...");
-  
+
   // Initialize EEPROM
   EEPROM.begin(EEPROM_SIZE);
-  
+
   // Load configuration
   loadConfig();
-  
+
   // Load last message from EEPROM
   loadLastMessage();
-  
+
   // Load display settings from EEPROM
   loadBrightness();
   loadScrollSpeed();
-  
+
   // Initialize display
   setupDisplay();
-  
+
   // Setup web server (always, for AP + settings access)
   setupWebServer();
-  
-  if (!config_valid) {
+
+  if (!config_valid)
+  {
     Serial.println("[!] No valid config found. Starting WiFi AP...");
     createAccessPoint();
     display.displayText("CONFIG", PA_CENTER, 100, 2000, PA_PRINT, PA_PRINT);
-  } else {
+  }
+  else
+  {
     Serial.println("[✓] Valid config loaded");
     Serial.printf("[→] WiFi SSID: %s\n", config.ssid);
     Serial.printf("[→] MQTT Host: %s:%d\n", config.mqtt_host, config.mqtt_port);
-    
+
     connectWiFi();
     setupMQTT();
   }
 }
 
 // ============ Main Loop ============
-void loop() {
+void loop()
+{
   // Handle WiFi AP mode
   // Handle web server requests (AP mode + mDNS)
   server.handleClient();
   MDNS.update();
-  
-  if (WiFi.getMode() == WIFI_AP && WiFi.status() != WL_CONNECTED) {
+
+  if (WiFi.getMode() == WIFI_AP && WiFi.status() != WL_CONNECTED)
+  {
     // Mode AP pur - afficher l'adresse IP
     static unsigned long last_update = 0;
-    if (millis() - last_update > 2000) {
+    if (millis() - last_update > 2000)
+    {
       last_update = millis();
       display.displayClear();
       display.print("AP:192.168.4.1");
     }
     return;
   }
-  
+
   // Handle WiFi STA mode
-  if (WiFi.status() != WL_CONNECTED) {
+  if (WiFi.status() != WL_CONNECTED)
+  {
     Serial.println("[!] WiFi disconnected, reconnecting...");
     connectWiFi();
     ready_shown = false;
     message_looping = false;
   }
-  
+
   // Show READY for 5 seconds after WiFi connects
-  if (WiFi.status() == WL_CONNECTED && !ready_shown) {
-    if (wifi_connected_time == 0) {
+  if (WiFi.status() == WL_CONNECTED && !ready_shown)
+  {
+    if (wifi_connected_time == 0)
+    {
       wifi_connected_time = millis();
     }
-    
-    if (millis() - wifi_connected_time < 5000) {
+
+    if (millis() - wifi_connected_time < 5000)
+    {
       display.displayClear();
       display.print("READY");
-    } else {
+    }
+    else
+    {
       ready_shown = true;
       display.displayClear();
     }
   }
-  
+
   // Handle MQTT connection
-  if (!mqtt.connected()) {
-    if (ready_shown && !message_looping) {
+  if (!mqtt.connected())
+  {
+    if (ready_shown && !message_looping)
+    {
       // Show connection failed after READY phase
       display.displayClear();
       display.print("FAILED");
     }
-    
+
     unsigned long now = millis();
-    if (now - last_mqtt_attempt > MQTT_RECONNECT_INTERVAL) {
+    if (now - last_mqtt_attempt > MQTT_RECONNECT_INTERVAL)
+    {
       last_mqtt_attempt = now;
       connectMQTT();
     }
-  } else {
+  }
+  else
+  {
     mqtt.loop();
   }
-  
+
   // Update display animation for looping messages
-  if (message_looping) {
+  if (message_looping)
+  {
     loopMessage();
   }
-  
+
   delay(10);
 }
 
 // ============ Configuration Management ============
-void loadConfig() {
+void loadConfig()
+{
   EEPROM.get(CONFIG_START, config);
-  
+
   // Validate config
-  config_valid = (config.ssid[0] != 0 && config.ssid[0] != 255 && 
-                  config.mqtt_host[0] != 0 && config.mqtt_host[0] != 255);
-  
-  if (config_valid) {
+  config_valid = (config.ssid[0] != 0 && config.ssid[0] != 255 && config.mqtt_host[0] != 0 &&
+                  config.mqtt_host[0] != 255);
+
+  if (config_valid)
+  {
     config.ssid[31] = 0;
     config.password[63] = 0;
     config.mqtt_host[31] = 0;
@@ -230,14 +252,16 @@ void loadConfig() {
   }
 }
 
-void saveConfig() {
+void saveConfig()
+{
   EEPROM.put(CONFIG_START, config);
   EEPROM.commit();
   config_valid = true;
   Serial.println("[✓] Config saved to EEPROM");
 }
 
-void resetConfig() {
+void resetConfig()
+{
   memset(&config, 0, sizeof(config));
   EEPROM.put(CONFIG_START, config);
   EEPROM.commit();
@@ -245,62 +269,73 @@ void resetConfig() {
   Serial.println("[✓] Config reset");
 }
 
-void saveLastMessage(const String& message) {
+void saveLastMessage(const String &message)
+{
   // Save last message to EEPROM for persistence
   char buffer[EEPROM_MESSAGE_SIZE];
   memset(buffer, 0, EEPROM_MESSAGE_SIZE);
   message.toCharArray(buffer, EEPROM_MESSAGE_SIZE - 1);
-  
-  for (int i = 0; i < EEPROM_MESSAGE_SIZE; i++) {
+
+  for (int i = 0; i < EEPROM_MESSAGE_SIZE; i++)
+  {
     EEPROM.write(EEPROM_MESSAGE_START + i, buffer[i]);
   }
   EEPROM.commit();
   Serial.printf("[✓] Message saved to EEPROM: %s\n", message.c_str());
 }
 
-void loadLastMessage() {
+void loadLastMessage()
+{
   // Load last message from EEPROM on boot
   char buffer[EEPROM_MESSAGE_SIZE];
   memset(buffer, 0, EEPROM_MESSAGE_SIZE);
-  
-  for (int i = 0; i < EEPROM_MESSAGE_SIZE; i++) {
+
+  for (int i = 0; i < EEPROM_MESSAGE_SIZE; i++)
+  {
     buffer[i] = EEPROM.read(EEPROM_MESSAGE_START + i);
   }
-  
-  if (buffer[0] != 0 && buffer[0] != 255) {
+
+  if (buffer[0] != 0 && buffer[0] != 255)
+  {
     current_message = String(buffer);
     Serial.printf("[✓] Loaded message from EEPROM: %s\n", current_message.c_str());
     // Don't auto-display yet, wait for MQTT connection
   }
 }
 
-void loadBrightness() {
+void loadBrightness()
+{
   int stored = EEPROM.read(EEPROM_BRIGHTNESS_ADDR);
-  if (stored != 255 && stored >= 0 && stored <= 15) {
+  if (stored != 255 && stored >= 0 && stored <= 15)
+  {
     brightness = stored;
     display.setIntensity(brightness);
     Serial.printf("[✓] Loaded brightness from EEPROM: %d\n", brightness);
   }
 }
 
-void saveBrightness() {
+void saveBrightness()
+{
   EEPROM.write(EEPROM_BRIGHTNESS_ADDR, brightness);
   EEPROM.commit();
   Serial.printf("[✓] Brightness saved to EEPROM: %d\n", brightness);
 }
 
-void loadScrollSpeed() {
+void loadScrollSpeed()
+{
   byte high = EEPROM.read(EEPROM_SCROLL_SPEED_ADDR);
   byte low = EEPROM.read(EEPROM_SCROLL_SPEED_ADDR + 1);
   int stored = (high << 8) | low;
-  
-  if (stored != 0xFFFF && stored >= 50 && stored <= 500) {
+
+  if (stored != 0xFFFF && stored >= 50 && stored <= 500)
+  {
     scroll_speed = stored;
     Serial.printf("[✓] Loaded scroll_speed from EEPROM: %d ms\n", scroll_speed);
   }
 }
 
-void saveScrollSpeed() {
+void saveScrollSpeed()
+{
   EEPROM.write(EEPROM_SCROLL_SPEED_ADDR, (scroll_speed >> 8) & 0xFF);
   EEPROM.write(EEPROM_SCROLL_SPEED_ADDR + 1, scroll_speed & 0xFF);
   EEPROM.commit();
@@ -308,69 +343,78 @@ void saveScrollSpeed() {
 }
 
 // ============ WiFi & Network ============
-void createAccessPoint() {
+void createAccessPoint()
+{
   // Get MAC address for unique SSID
   uint8_t mac[6];
   WiFi.macAddress(mac);
   String device_id = String(mac[4], HEX) + String(mac[5], HEX);
   device_id.toUpperCase();
-  
+
   String ap_ssid = String(AP_SSID) + "-" + device_id;
-  
+
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ap_ssid.c_str(), "", 1, false, 4);
-  WiFi.softAPConfig(IPAddress(192, 168, 4, 1), 
-                    IPAddress(192, 168, 4, 1), 
+  WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1),
                     IPAddress(255, 255, 255, 0));
-  
+
   Serial.printf("[✓] WiFi AP created: %s\n", ap_ssid.c_str());
   Serial.println("[✓] IP: 192.168.4.1");
 }
 
-void connectWiFi() {
+void connectWiFi()
+{
   Serial.printf("[→] Connecting to WiFi: %s\n", config.ssid);
-  
+
   // Mode AP+STA: Garder l'AP actif pour accès web + connexion à réseau principal
   WiFi.mode(WIFI_AP_STA);
-  
+
   // Configurer l'AP toujours actif
   String ap_ssid = "ESP8266-Setup-" + String(WiFi.macAddress().substring(9));
   WiFi.softAP(ap_ssid.c_str(), "12345678");
   Serial.printf("[✓] Soft AP started: %s on 192.168.4.1\n", ap_ssid.c_str());
-  
+
   // Connecter au réseau WiFi principal
   WiFi.begin(config.ssid, config.password);
-  
+
   int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 40) {
+  while (WiFi.status() != WL_CONNECTED && attempts < 40)
+  {
     delay(500);
     Serial.print(".");
     attempts++;
   }
-  
-  if (WiFi.status() == WL_CONNECTED) {
+
+  if (WiFi.status() == WL_CONNECTED)
+  {
     Serial.printf("\n[✓] WiFi connected: %s\n", WiFi.localIP().toString().c_str());
-  } else {
+  }
+  else
+  {
     Serial.println("\n[!] WiFi connection failed");
     display.displayText("WiFi FAILED", PA_CENTER, 100, 3000, PA_PRINT, PA_PRINT);
   }
 }
 
-void setupMQTT() {
+void setupMQTT()
+{
   mqtt.setServer(config.mqtt_host, config.mqtt_port);
   mqtt.setCallback(mqttCallback);
-  
+
   Serial.printf("[→] MQTT Server: %s:%d\n", config.mqtt_host, config.mqtt_port);
 }
 
-void connectMQTT() {
-  if (!WiFi.isConnected()) {
+void connectMQTT()
+{
+  if (!WiFi.isConnected())
+  {
     return;
   }
-  
+
   Serial.printf("[→] Connecting to MQTT: %s\n", config.mqtt_host);
-  
-  if (mqtt.connect(config.client_id, config.mqtt_user, config.mqtt_pass)) {
+
+  if (mqtt.connect(config.client_id, config.mqtt_user, config.mqtt_pass))
+  {
     Serial.println("[✓] MQTT connected");
     mqtt.subscribe(MQTT_TOPIC);
     mqtt.subscribe("home_assistant/spotify/brightness");
@@ -378,77 +422,96 @@ void connectMQTT() {
     Serial.printf("[✓] Subscribed to: %s\n", MQTT_TOPIC);
     Serial.println("[✓] Subscribed to: home_assistant/spotify/brightness");
     Serial.println("[✓] Subscribed to: home_assistant/spotify/scroll_speed");
-  } else {
+  }
+  else
+  {
     Serial.printf("[!] MQTT connection failed, code: %d\n", mqtt.state());
   }
 }
 
-void mqttCallback(char* topic, byte* payload, unsigned int length) {
+void mqttCallback(char *topic, byte *payload, unsigned int length)
+{
   // Convert payload to null-terminated string
   char buffer[512];
-  if (length > 511) length = 511;
+  if (length > 511)
+    length = 511;
   memcpy(buffer, payload, length);
   buffer[length] = '\0';
-  
+
   String message = String(buffer);
   String topic_str = String(topic);
-  
+
   // Trim whitespace
   message.trim();
-  
+
   Serial.printf("[MQTT] %s: %s\n", topic, message.c_str());
-  
+
   // Check which topic this is
-  if (topic_str == MQTT_TOPIC) {
+  if (topic_str == MQTT_TOPIC)
+  {
     // Main display message
-    if (message.length() > 0) {
+    if (message.length() > 0)
+    {
       updateDisplay(message);
-    } else {
-      updateDisplay("");  // Call updateDisplay with empty to clear
     }
-  } else if (topic_str == "home_assistant/spotify/brightness") {
+    else
+    {
+      updateDisplay(""); // Call updateDisplay with empty to clear
+    }
+  }
+  else if (topic_str == "home_assistant/spotify/brightness")
+  {
     // Control brightness
     int new_brightness = message.toInt();
-    if (new_brightness >= 0 && new_brightness <= 15) {
+    if (new_brightness >= 0 && new_brightness <= 15)
+    {
       brightness = new_brightness;
       display.setIntensity(brightness);
-      saveBrightness();  // Save to EEPROM
+      saveBrightness(); // Save to EEPROM
       Serial.printf("[✓] Brightness set to %d\n", brightness);
     }
-  } else if (topic_str == "home_assistant/spotify/scroll_speed") {
+  }
+  else if (topic_str == "home_assistant/spotify/scroll_speed")
+  {
     // Control scroll speed
     int new_speed = message.toInt();
-    if (new_speed >= 50 && new_speed <= 500) {
+    if (new_speed >= 50 && new_speed <= 500)
+    {
       scroll_speed = new_speed;
-      saveScrollSpeed();  // Save to EEPROM
+      saveScrollSpeed(); // Save to EEPROM
       Serial.printf("[✓] Scroll speed set to %d ms\n", scroll_speed);
     }
   }
 }
 
 // ============ Web Server ============
-void setupWebServer() {
+void setupWebServer()
+{
   server.on("/", handleRoot);
   server.on("/config", HTTP_POST, handleConfig);
   server.on("/api/brightness", handleBrightnessAPI);
   server.on("/api/scroll_speed", handleScrollSpeedAPI);
   server.on("/api/test-message", handleTestMessageAPI);
   server.onNotFound(handleNotFound);
-  
+
   server.begin();
-  
+
   // Initialiser mDNS pour accès par hostname.local
-  if (MDNS.begin("esp8266-spotify")) {
+  if (MDNS.begin("esp8266-spotify"))
+  {
     MDNS.addService("http", "tcp", 80);
     Serial.println("[✓] mDNS started: http://esp8266-spotify.local");
-  } else {
+  }
+  else
+  {
     Serial.println("[!] mDNS failed");
   }
-  
+
   Serial.println("[✓] Web server started on http://192.168.4.1 ou http://esp8266-spotify.local");
 }
 
-void handleRoot() {
+void handleRoot()
+{
   String html = R"EOF(
 <!DOCTYPE html>
 <html lang="en">
@@ -528,11 +591,11 @@ void handleRoot() {
       <label for="brightness">💡 Brightness (0-15)</label>
       <div>
         <input type="range" id="brightness" min="0" max="15" value=")EOF";
-  
+
   html += brightness;
   html += R"EOF(">
         <span class="range-value" id="brightnessValue">)EOF";
-  
+
   html += brightness;
   html += R"EOF(</span>/15
       </div>
@@ -542,11 +605,11 @@ void handleRoot() {
       <label for="scrollSpeed">⚡ Scroll Speed (50-500ms)</label>
       <div>
         <input type="range" id="scrollSpeed" min="50" max="500" step="10" value=")EOF";
-  
+
   html += scroll_speed;
   html += R"EOF(">
         <span class="range-value" id="scrollSpeedValue">)EOF";
-  
+
   html += scroll_speed;
   html += R"EOF(</span>ms
       </div>
@@ -604,40 +667,45 @@ void handleRoot() {
 </body>
 </html>
 )EOF";
-  
+
   server.send(200, "text/html; charset=utf-8", html);
 }
 
-void handleConfig() {
-  if (!server.hasArg("mqtt_host")) {
+void handleConfig()
+{
+  if (!server.hasArg("mqtt_host"))
+  {
     server.send(400, "text/plain", "Missing MQTT host");
     return;
   }
-  
+
   // Only update SSID if provided
-  if (server.hasArg("ssid") && server.arg("ssid").length() > 0) {
+  if (server.hasArg("ssid") && server.arg("ssid").length() > 0)
+  {
     strncpy(config.ssid, server.arg("ssid").c_str(), 31);
   }
-  
+
   // Only update password if provided
-  if (server.hasArg("password") && server.arg("password").length() > 0) {
+  if (server.hasArg("password") && server.arg("password").length() > 0)
+  {
     strncpy(config.password, server.arg("password").c_str(), 63);
   }
-  
+
   // Always update MQTT settings
   strncpy(config.mqtt_host, server.arg("mqtt_host").c_str(), 31);
   config.mqtt_port = server.arg("mqtt_port").toInt();
-  if (config.mqtt_port <= 0) config.mqtt_port = 1883;
+  if (config.mqtt_port <= 0)
+    config.mqtt_port = 1883;
   strncpy(config.mqtt_user, server.arg("mqtt_user").c_str(), 31);
   strncpy(config.mqtt_pass, server.arg("mqtt_pass").c_str(), 63);
-  
+
   // Generate client ID from MAC
   uint8_t mac[6];
   WiFi.macAddress(mac);
   snprintf(config.client_id, 31, "esp8266_spotify_%02x%02x%02x", mac[3], mac[4], mac[5]);
-  
+
   saveConfig();
-  
+
   // Send success response
   String html = R"EOF(
 <!DOCTYPE html>
@@ -657,134 +725,154 @@ void handleConfig() {
 </body>
 </html>
 )EOF";
-  
+
   server.send(200, "text/html; charset=utf-8", html);
-  
+
   // Restart device
   delay(2000);
   ESP.restart();
 }
 
-void handleNotFound() {
+void handleNotFound()
+{
   server.send(404, "text/plain", "Not Found");
 }
 
-void handleBrightnessAPI() {
-  if (!server.hasArg("value")) {
+void handleBrightnessAPI()
+{
+  if (!server.hasArg("value"))
+  {
     server.send(400, "text/plain", "Missing value");
     return;
   }
-  
+
   int value = server.arg("value").toInt();
-  if (value < 0) value = 0;
-  if (value > 15) value = 15;
-  
+  if (value < 0)
+    value = 0;
+  if (value > 15)
+    value = 15;
+
   brightness = value;
   display.setIntensity(brightness);
-  saveBrightness();  // Save to EEPROM
-  
+  saveBrightness(); // Save to EEPROM
+
   Serial.print("[✓] Brightness set to ");
   Serial.println(brightness);
-  
+
   server.send(200, "text/plain", "OK");
 }
 
-void handleScrollSpeedAPI() {
-  if (!server.hasArg("value")) {
+void handleScrollSpeedAPI()
+{
+  if (!server.hasArg("value"))
+  {
     server.send(400, "text/plain", "Missing value");
     return;
   }
-  
+
   int value = server.arg("value").toInt();
-  if (value < 50) value = 50;
-  if (value > 500) value = 500;
-  
+  if (value < 50)
+    value = 50;
+  if (value > 500)
+    value = 500;
+
   scroll_speed = value;
-  saveScrollSpeed();  // Save to EEPROM
-  
+  saveScrollSpeed(); // Save to EEPROM
+
   Serial.print("[✓] Scroll speed set to ");
   Serial.print(scroll_speed);
   Serial.println("ms");
-  
+
   server.send(200, "text/plain", "OK");
 }
 
-void handleTestMessageAPI() {
-  if (!server.hasArg("text")) {
+void handleTestMessageAPI()
+{
+  if (!server.hasArg("text"))
+  {
     server.send(400, "text/plain", "Missing text");
     return;
   }
-  
+
   String test_msg = server.arg("text");
   Serial.printf("[→] Test message received: %s\n", test_msg.c_str());
   updateDisplay(test_msg);
-  
+
   server.send(200, "text/plain", "OK");
 }
 
 // ============ Display ============
-void setupDisplay() {
+void setupDisplay()
+{
   display.begin();
   display.setIntensity(MAX_INTENSITY);
   display.setCharSpacing(1);
   display.setTextAlignment(PA_LEFT);
   display.displayClear();
-  
+
   Serial.println("[✓] MAX7219 display initialized");
 }
 
-void updateDisplay(const String& message) {
+void updateDisplay(const String &message)
+{
   current_message = message;
   Serial.printf("[→] Displaying: %s\n", message.c_str());
-  
+
   // Handle empty message - clear display
-  if (message.length() == 0) {
+  if (message.length() == 0)
+  {
     display.displayClear();
     message_looping = false;
     scroll_text = "";
     Serial.println("[→] Display cleared");
     return;
   }
-  
+
   // Save this message to EEPROM for persistence
   saveLastMessage(message);
-  
+
   // Convert to uppercase
   String display_text = message;
   display_text.toUpperCase();
-  
+
   // Remove non-ASCII characters (MAX7219 only supports ASCII)
   String clean_text = "";
-  for (unsigned int i = 0; i < display_text.length(); i++) {
+  for (unsigned int i = 0; i < display_text.length(); i++)
+  {
     char c = display_text[i];
-    if (c >= 32 && c <= 126) {
+    if (c >= 32 && c <= 126)
+    {
       clean_text += c;
     }
   }
   display_text = clean_text;
-  
+
   // Trim to reasonable length
-  if (display_text.length() > 64) {
+  if (display_text.length() > 64)
+  {
     display_text = display_text.substring(0, 64);
   }
-  
+
   // Add padding spaces for proper scrolling
   scroll_text = "    " + display_text + "    ";
-  
+
   // Clear and setup scrolling (ONLY ONCE)
   display.displayClear();
   display.setTextAlignment(PA_LEFT);
   display.setCharSpacing(1);
   display.displayScroll(scroll_text.c_str(), PA_LEFT, PA_SCROLL_LEFT, scroll_speed);
-  
+
   // Mark that we're looping a message
   message_looping = true;
 }
 
 // Helper to continue looping the current message
-void loopMessage() {
-  if (message_looping && scroll_text.length() > 0) {
-    if (display.displayAnimate()) {
+void loopMessage()
+{
+  if (message_looping && scroll_text.length() > 0)
+  {
+    if (display.displayAnimate())
+    {
       // Scroll finished, restart it - but use the SAME stored text
       display.displayScroll(scroll_text.c_str(), PA_LEFT, PA_SCROLL_LEFT, scroll_speed);
     }
