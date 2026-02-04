@@ -1,0 +1,15 @@
+.DS_Store
+*.swp
+*.swo
+*~
+
+.pio/
+.vscode/
+build/
+.clang_complete
+.gcc-flags.json
+
+*.log
+
+
+config_wifi.json
