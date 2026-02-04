@@ -431,7 +431,9 @@ The GitHub Actions workflow will:
 4. The binary is ready to download and flash
 
 **Download from Releases page:** <https://github.com/YOUR_USERNAME/ESP_DispSpotTrack/releases>
+## 🌟 Inspiration
 
+This project is loosely inspired by [ESPTimeCast](https://github.com/mfactory-osaka/ESPTimeCast), which demonstrates excellent patterns for ESP8266 display rendering and WiFi management. Special thanks to that project for the MD_Parola usage patterns.
 ## �📚 References
 
 - [Arduino IDE Documentation](https://docs.arduino.cc/)
