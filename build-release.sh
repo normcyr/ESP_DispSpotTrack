@@ -12,9 +12,17 @@ FIRMWARE_NAME="esp8266-spotify-v${VERSION}-${BUILD_DATE}.bin"
 echo "🔨 Building firmware v${VERSION}..."
 
 # Update version in main.cpp
+# Use sed that works on both macOS and Linux
 echo "📝 Updating version in main.cpp..."
-sed -i '' "s/#define FIRMWARE_VERSION \"[^\"]*\"/#define FIRMWARE_VERSION \"${VERSION}\"/" \
-  ESP_DispSpotTrack/src/main.cpp
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # macOS
+  sed -i '' "s/#define FIRMWARE_VERSION \"[^\"]*\"/#define FIRMWARE_VERSION \"${VERSION}\"/" \
+    ESP_DispSpotTrack/src/main.cpp
+else
+  # Linux/GitHub Actions
+  sed -i "s/#define FIRMWARE_VERSION \"[^\"]*\"/#define FIRMWARE_VERSION \"${VERSION}\"/" \
+    ESP_DispSpotTrack/src/main.cpp
+fi
 
 if [ $? -ne 0 ]; then
   echo "❌ Failed to update version in main.cpp"
